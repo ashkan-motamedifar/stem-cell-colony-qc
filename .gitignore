@@ -19,11 +19,9 @@ data/processed/
 *.tar
 *.tar.gz
 
-# Results that are reproducible
-results/figures/*.png
-results/tables/*.csv
-!results/figures/.gitkeep
-!results/tables/.gitkeep
+# Results: track tables (small) and figures (small) in git so we have
+# a reproducible record of every reported number alongside the code.
+# Large artifacts (checkpoints) stay gitignored — see *.pt below.
 
 # Model checkpoints
 *.pt
