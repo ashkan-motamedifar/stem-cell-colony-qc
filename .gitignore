@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data — never commit the dataset
+data/raw/
+data/processed/
+*.zip
+*.tar
+*.tar.gz
+
+# Results that are reproducible
+results/figures/*.png
+results/tables/*.csv
+!results/figures/.gitkeep
+!results/tables/.gitkeep
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+checkpoints/
+
+# Logs
+*.log
+runs/
+wandb/
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
