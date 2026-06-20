@@ -1,11 +1,13 @@
-torch>=2.2
-torchvision>=0.17
-transformers>=4.40
+# Pinned for x86_64 macOS (Rosetta) — PyTorch dropped Intel macOS support after 2.2.x.
+# If you migrate to native arm64 Python, you can relax these upper bounds.
+torch>=2.2,<2.3
+torchvision>=0.17,<0.18
+transformers>=4.40,<5.0
 open_clip_torch>=2.24
 scikit-learn>=1.4
 matplotlib>=3.8
 pandas>=2.2
 pillow>=10.2
-numpy>=1.26
+numpy>=1.26,<2.0
 tqdm>=4.66
 requests>=2.31
