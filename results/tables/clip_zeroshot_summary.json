@@ -1,0 +1,90 @@
+{
+  "model": "clip_zeroshot",
+  "device": "mps",
+  "n_images": 269,
+  "embedding_dim": 512,
+  "prompts": [
+    {
+      "name": "simple",
+      "bad_prompt": "a microscope image of an unhealthy stem cell colony",
+      "good_prompt": "a microscope image of a healthy stem cell colony",
+      "accuracy": 0.5018587360594795,
+      "precision": 0.5056179775280899,
+      "recall": 0.9854014598540146,
+      "f1": 0.6683168316831684,
+      "auc": 0.6470360539703606,
+      "confusion": [
+        [
+          0,
+          132
+        ],
+        [
+          2,
+          135
+        ]
+      ]
+    },
+    {
+      "name": "domain",
+      "bad_prompt": "a phase-contrast microscopy image of a differentiating, low-quality human pluripotent stem cell colony with irregular borders",
+      "good_prompt": "a phase-contrast microscopy image of a uniform, high-quality undifferentiated human pluripotent stem cell colony with smooth tight borders",
+      "accuracy": 0.40148698884758366,
+      "precision": 0.2,
+      "recall": 0.058394160583941604,
+      "f1": 0.0903954802259887,
+      "auc": 0.25718867507188675,
+      "confusion": [
+        [
+          100,
+          32
+        ],
+        [
+          129,
+          8
+        ]
+      ]
+    },
+    {
+      "name": "contrast",
+      "bad_prompt": "a photo of cells that look sick, irregular, or differentiated",
+      "good_prompt": "a photo of cells that look healthy, uniform, and undifferentiated",
+      "accuracy": 0.46096654275092935,
+      "precision": 0.48058252427184467,
+      "recall": 0.7226277372262774,
+      "f1": 0.577259475218659,
+      "auc": 0.4870050873700509,
+      "confusion": [
+        [
+          25,
+          107
+        ],
+        [
+          38,
+          99
+        ]
+      ]
+    },
+    {
+      "name": "morphological",
+      "bad_prompt": "a phase-contrast image of a stem cell colony with rough edges and differentiating cells in the center",
+      "good_prompt": "a phase-contrast image of a stem cell colony with a tight smooth border and uniform morphology",
+      "accuracy": 0.4758364312267658,
+      "precision": 0.42857142857142855,
+      "recall": 0.08759124087591241,
+      "f1": 0.14545454545454545,
+      "auc": 0.45841627958416276,
+      "confusion": [
+        [
+          116,
+          16
+        ],
+        [
+          125,
+          12
+        ]
+      ]
+    }
+  ],
+  "best_prompt": "simple",
+  "best_accuracy": 0.5018587360594795
+}
