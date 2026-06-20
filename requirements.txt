@@ -11,3 +11,5 @@ pillow>=10.2
 numpy>=1.26,<2.0
 tqdm>=4.66
 requests>=2.31
+scikit-image>=0.22,<0.25
+
