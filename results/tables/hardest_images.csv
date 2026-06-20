@@ -1,0 +1,9 @@
+image,y_true,clip_probe,dinov2_probe,ensemble_resnet50+dinov2+clip,resnet50_probe,vgg13_paper,n_correct,n_wrong
+14Ax40_bad.png,0.0,False,False,False,False,False,0,5
+20Bx40_bad.png,0.0,False,False,False,False,False,0,5
+48Ax40_bad.png,0.0,False,False,False,False,False,0,5
+80x40_bad.png,0.0,False,False,False,False,False,0,5
+98Dx40_bad.png,0.0,False,False,False,False,False,0,5
+100Bx40_bad.png,0.0,False,False,False,True,False,1,4
+24x40_good.png,1.0,False,False,False,False,True,1,4
+25Bx40_good.png,1.0,False,False,False,False,True,1,4
