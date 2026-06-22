@@ -4,6 +4,12 @@ Benchmarking pretrained / self-supervised / zero-shot vision models against a
 from-scratch VGG13 baseline on a small (269-image) phase-contrast microscopy
 dataset of human pluripotent stem cell colonies labeled good / bad.
 
+**Presented at:** ITI HiFunMat Summer School 2026 — *Hierarchical & Functional
+Materials for Health, Environment & Energy*, Université de Strasbourg,
+**29 June – 1 July 2026**.
+
+Final poster: [`results/poster.pdf`](results/poster.pdf)
+
 Baseline reference: Mamaeva et al., IJMS 2022 — https://doi.org/10.3390/ijms24010140
 Dataset: https://doi.org/10.5281/zenodo.7316404
 
