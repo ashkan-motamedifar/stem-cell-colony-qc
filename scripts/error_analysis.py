@@ -1,22 +1,9 @@
-"""Which images is everyone getting wrong?
-
-Loads predictions.csv, pivots so each image has one column per model with
-that model's predicted probability for "good". Identifies:
-
-  - hard_for_all: misclassified by VGG13, ResNet50, DINOv2, CLIP, ensemble
-  - easy_disagreements: cases where good-features models disagree with VGG13
-  - confident_misses: high-confidence wrong predictions (likely interesting)
-
-Saves a side-by-side panel of the top hard-for-all images for biological
-commentary on the poster.
-"""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from PIL import Image
 
@@ -38,25 +25,16 @@ def main() -> None:
     df = df[df["model"].isin(MAIN_MODELS)].copy()
     df["correct"] = df["y_true"] == df["y_pred"]
 
-    # Per image (each image appears once per model — exactly once per val fold)
-    grid = df.pivot_table(
-        index=["image", "y_true"], columns="model", values="y_prob", aggfunc="first"
-    ).reset_index()
-    pred = df.pivot_table(
-        index=["image", "y_true"], columns="model", values="y_pred", aggfunc="first"
-    ).reset_index()
     correct = df.pivot_table(
         index=["image", "y_true"], columns="model", values="correct", aggfunc="first"
     ).reset_index()
 
-    n_models = len(MAIN_MODELS)
     available = [m for m in MAIN_MODELS if m in correct.columns]
     correct["n_correct"] = correct[available].sum(axis=1)
     correct["n_wrong"] = len(available) - correct["n_correct"]
 
     print(f"Models considered: {available}")
-    print(f"Total images with predictions: {len(correct)}")
-    print()
+    print(f"Total images with predictions: {len(correct)}\n")
     print("Distribution of (# models correct) per image:")
     print(correct["n_correct"].value_counts().sort_index().to_string())
 
@@ -65,29 +43,21 @@ def main() -> None:
     for _, r in hard.iterrows():
         print(f"  {r['image']} true={int(r['y_true'])} n_correct={int(r['n_correct'])}/{len(available)}")
 
-    # Save table
     hard.to_csv(TABLES / "hardest_images.csv", index=False)
 
-    # Save panel of these images
     paths_by_name = {p.name: p for p in list_images()}
-    rows = hard.head(6)
     fig, axes = plt.subplots(2, 3, figsize=(11, 7))
     axes = axes.flatten()
-    for i, (_, r) in enumerate(rows.iterrows()):
+    for i, (_, r) in enumerate(hard.head(6).iterrows()):
         path = paths_by_name.get(r["image"])
         if path is None:
             axes[i].axis("off")
             continue
-        img = Image.open(path).convert("L")
-        axes[i].imshow(img, cmap="gray")
+        axes[i].imshow(Image.open(path).convert("L"), cmap="gray")
         true_lbl = "GOOD" if r["y_true"] == 1 else "BAD"
-        title = (f"{r['image']}  true={true_lbl}\n"
-                 f"{int(r['n_correct'])}/{len(available)} models correct")
-        axes[i].set_title(title, fontsize=9)
+        axes[i].set_title(f"{r['image']}  true={true_lbl}\n{int(r['n_correct'])}/{len(available)} models correct", fontsize=9)
         axes[i].axis("off")
-    fig.suptitle("Hardest cases: images most models got wrong\n"
-                 "(candidates for biological/morphological discussion on the poster)",
-                 fontsize=10)
+    fig.suptitle("Hardest cases: images most models got wrong\n(candidates for biological/morphological discussion on the poster)", fontsize=10)
     fig.tight_layout()
     out = FIGS / "hardest_images.png"
     fig.savefig(out, dpi=170, bbox_inches="tight")

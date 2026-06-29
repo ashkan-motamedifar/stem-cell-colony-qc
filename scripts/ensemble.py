@@ -1,16 +1,3 @@
-"""Ensemble of frozen foundation-model features.
-
-Concatenate cached embeddings from ResNet50 + DINOv2 + CLIP into one
-3328-dim vector per image, train a logistic regression with 5-fold CV.
-This is the "proposed method": no domain training, no augmentation, just
-a single LR over the union of pretrained visual representations.
-
-Run probe_features.py for each backbone first to populate the cache.
-
-Usage:
-    python scripts/ensemble.py                       # all 3
-    python scripts/ensemble.py --backbones resnet50 dinov2
-"""
 from __future__ import annotations
 
 import argparse
@@ -37,12 +24,10 @@ def load_cached(backbone: str, paths: list[Path]) -> tuple[np.ndarray, np.ndarra
     cache = CACHE_DIR / f"embeddings_{backbone}.npz"
     if not cache.exists():
         raise FileNotFoundError(
-            f"No cached embeddings for {backbone}. "
-            f"Run: python scripts/probe_features.py --backbone {backbone}"
+            f"No cached embeddings for {backbone}. Run: python scripts/probe_features.py --backbone {backbone}"
         )
     data = np.load(cache, allow_pickle=True)
-    cached_paths = [Path(p) for p in data["paths"]]
-    if cached_paths != list(paths):
+    if [Path(p) for p in data["paths"]] != list(paths):
         raise RuntimeError(f"Cached paths differ for {backbone}. Re-run probe.")
     return data["X"], data["y"]
 
@@ -62,16 +47,14 @@ def main() -> None:
     tag = args.tag or "ensemble_" + "+".join(args.backbones)
     paths = list_images()
 
-    parts = []
-    y_ref = None
+    parts, y = [], None
     for backbone in args.backbones:
-        X, y = load_cached(backbone, paths)
+        X, y_ = load_cached(backbone, paths)
         parts.append(X)
-        y_ref = y if y_ref is None else y_ref
+        y = y_ if y is None else y
         print(f"  {backbone:10s}: {X.shape}")
 
     X = np.concatenate(parts, axis=1)
-    y = y_ref
     print(f"  concatenated: {X.shape}")
 
     folds = stratified_kfold(paths, n_splits=5, seed=args.seed)[: args.folds]
@@ -84,16 +67,12 @@ def main() -> None:
         X_va, y_va = X[val_idx], y[val_idx]
 
         scaler = StandardScaler().fit(X_tr)
-        X_tr_s = scaler.transform(X_tr)
-        X_va_s = scaler.transform(X_va)
-        clf = LogisticRegression(C=args.C, max_iter=4000, solver="lbfgs",
-                                 random_state=args.seed + fold_idx)
-        clf.fit(X_tr_s, y_tr)
-        y_prob = clf.predict_proba(X_va_s)[:, 1]
+        clf = LogisticRegression(C=args.C, max_iter=4000, solver="lbfgs", random_state=args.seed + fold_idx)
+        clf.fit(scaler.transform(X_tr), y_tr)
+        y_prob = clf.predict_proba(scaler.transform(X_va))[:, 1]
         m = compute_metrics(y_va, y_prob)
         per_fold.append(m)
-        save_predictions(PRED_CSV, val_paths, y_va.tolist(), y_prob.tolist(),
-                         fold=fold_idx, seed=args.seed, model=tag)
+        save_predictions(PRED_CSV, val_paths, y_va.tolist(), y_prob.tolist(), fold=fold_idx, seed=args.seed, model=tag)
         print(f"  fold {fold_idx}: acc={m.accuracy:.3f} f1={m.f1:.3f} auc={m.auc:.3f}")
 
     agg = aggregate_folds(per_fold)

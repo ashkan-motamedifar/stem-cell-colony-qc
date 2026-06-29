@@ -1,12 +1,4 @@
-"""Paper-faithful reproduction of Mamaeva et al. 2022's "VGG13" — which is NOT
-torchvision's VGG13. It's a tiny custom 12-conv + 1-FC net with grayscale input,
-narrow channels (thickness=4), histogram equalization, and BCE loss.
-
-Architecture copied from mamaeva_et_al_2022.py in the Zenodo archive (Net class).
-"""
 from __future__ import annotations
-
-from pathlib import Path
 
 import numpy as np
 import torch
@@ -31,11 +23,7 @@ def _conv3x3(in_channels: int, out_channels: int, pool: bool = False) -> nn.Sequ
 
 
 class PaperVGG13(nn.Module):
-    """Mamaeva 2022 custom VGG13: 12 conv + 1 FC, grayscale, sigmoid binary output.
-
-    Input shape: (B, 1, 256, 256) — grayscale, range [0, 1].
-    Output:      (B, 1) sigmoid probability for class "good".
-    """
+    """Mamaeva 2022 custom net: 12 conv + 1 FC, grayscale 256x256 input, sigmoid output."""
 
     def __init__(self, thickness: int = 4):
         super().__init__()
@@ -62,19 +50,10 @@ class PaperVGG13(nn.Module):
         ]:
             x = layer(x)
         x = x.reshape(x.shape[0], -1)
-        x = self.fc1(x)
-        return torch.sigmoid(x)
+        return torch.sigmoid(self.fc1(x))
 
 
 class PaperDataset(torch.utils.data.Dataset):
-    """Paper-faithful preprocessing pipeline.
-
-    Train: resize 512x512 → random crop 256x256 → hflip + vflip + transpose → equalize → grayscale.
-    Val:   resize 256x256 → equalize → grayscale.
-
-    Returns (tensor (1, 256, 256) float in [0, 1], label float scalar).
-    """
-
     def __init__(self, paths, train: bool = True):
         self.paths = list(paths)
         self.labels = [parse_label(p) for p in self.paths]
@@ -84,13 +63,12 @@ class PaperDataset(torch.utils.data.Dataset):
         return len(self.paths)
 
     def _augment(self, arr: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-        # arr shape: (H, W, C) uint8
         if rng.random() < 0.5:
-            arr = arr[:, ::-1, :]  # horizontal flip
+            arr = arr[:, ::-1, :]
         if rng.random() < 0.5:
-            arr = arr[::-1, :, :]  # vertical flip
+            arr = arr[::-1, :, :]
         if rng.random() < 0.5:
-            arr = arr.transpose(1, 0, 2)  # transpose H<->W
+            arr = arr.transpose(1, 0, 2)
         return np.ascontiguousarray(arr)
 
     def __getitem__(self, idx: int):
@@ -98,7 +76,6 @@ class PaperDataset(torch.utils.data.Dataset):
         if self.train:
             img = img.resize((512, 512), Image.LANCZOS)
             arr = np.array(img)
-            # random crop 256x256
             rng = np.random.default_rng()
             top = rng.integers(0, arr.shape[0] - 256 + 1)
             left = rng.integers(0, arr.shape[1] - 256 + 1)
@@ -108,10 +85,7 @@ class PaperDataset(torch.utils.data.Dataset):
             img = img.resize((256, 256), Image.LANCZOS)
             arr = np.array(img)
 
-        arr_u8 = img_as_ubyte(arr)
-        arr_eq = exposure.equalize_hist(arr_u8)  # → float in [0, 1]
-        gray = rgb2gray(arr_eq).astype(np.float32)  # (256, 256)
-        gray = gray[None, :, :]  # (1, 256, 256)
-        x = torch.from_numpy(gray)
+        gray = rgb2gray(exposure.equalize_hist(img_as_ubyte(arr))).astype(np.float32)
+        x = torch.from_numpy(gray[None, :, :])
         y = torch.tensor(self.labels[idx], dtype=torch.float32)
         return x, y

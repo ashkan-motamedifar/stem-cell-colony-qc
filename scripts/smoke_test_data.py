@@ -1,7 +1,3 @@
-"""Sanity check: dataset loads, labels parse, splits are balanced, MPS works.
-
-Run from project root: ``python scripts/smoke_test_data.py``
-"""
 import sys
 from collections import Counter
 from pathlib import Path
@@ -22,7 +18,6 @@ from src.data import (
 
 def main() -> None:
     paths = list_images()
-    labels = [Counter(p.name.split("_")[-1] for p in paths)]
     print(f"Total images: {len(paths)}")
     print(f"Class balance: {dict(Counter(['good' if 'good' in p.name else 'bad' for p in paths]))}")
 
@@ -41,14 +36,11 @@ def main() -> None:
     ds_imnet = MamaevaDataset(val_paths, transform=imagenet_transform(train=False))
     x_p, y_p = ds_paper[0]
     x_i, y_i = ds_imnet[0]
-    print(f"\nPaper transform sample:    shape={tuple(x_p.shape)}, dtype={x_p.dtype}, "
-          f"min={x_p.min():.3f}, max={x_p.max():.3f}, label={y_p}")
-    print(f"ImageNet transform sample: shape={tuple(x_i.shape)}, dtype={x_i.dtype}, "
-          f"min={x_i.min():.3f}, max={x_i.max():.3f}, label={y_i}")
+    print(f"\nPaper transform sample:    shape={tuple(x_p.shape)}, min={x_p.min():.3f}, max={x_p.max():.3f}, label={y_p}")
+    print(f"ImageNet transform sample: shape={tuple(x_i.shape)}, min={x_i.min():.3f}, max={x_i.max():.3f}, label={y_i}")
 
     device = get_device()
     print(f"\nDevice: {device}")
-    import torch
     x_p_dev = x_p.unsqueeze(0).to(device)
     print(f"Moved sample to {device}: OK (shape={tuple(x_p_dev.shape)})")
 

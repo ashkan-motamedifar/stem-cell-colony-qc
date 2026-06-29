@@ -1,12 +1,3 @@
-"""Build the poster's main comparison plots from the saved JSON summaries.
-
-Outputs:
-  results/figures/comparison_bars.png   bar chart of accuracy + F1 with std error bars
-  results/figures/confusion_matrices.png   2x3 grid, one per model
-  results/tables/comparison.csv         flat table for the poster
-
-Reads only the JSON summaries + predictions.csv — no model re-runs needed.
-"""
 from __future__ import annotations
 
 import json
@@ -26,9 +17,8 @@ RESULTS_DIR = PROJECT / "results"
 TABLES = RESULTS_DIR / "tables"
 FIGS = RESULTS_DIR / "figures"
 
-# Display order + labels for the poster
 MODELS = [
-    ("vgg13_paper", "VGG13\n(from scratch)", "#d62728"),  # red — paper baseline
+    ("vgg13_paper", "VGG13\n(from scratch)", "#d62728"),
     ("resnet50_probe", "ResNet50\n(ImageNet)", "#1f77b4"),
     ("dinov2_probe", "DINOv2\n(SSL)", "#2ca02c"),
     ("clip_probe", "CLIP\n(VL probe)", "#9467bd"),
@@ -50,12 +40,10 @@ def load_summary(tag: str) -> dict | None:
 
 
 def metric_with_std(summary: dict, key: str) -> tuple[float, float]:
-    """Return (mean, std). Zero-shot has no folds → std=0."""
     if "aggregate" in summary:
         v = summary["aggregate"].get(key)
         if v is not None:
             return v["mean"], v["std"]
-    # zero-shot: read the best prompt's metric (no std)
     if summary.get("model") == "clip_zeroshot":
         best = summary["best_prompt"]
         for prompt in summary["prompts"]:
@@ -66,23 +54,16 @@ def metric_with_std(summary: dict, key: str) -> tuple[float, float]:
 
 def bar_chart() -> None:
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    width = 0.7
-    for ax, metric, title in [
-        (axes[0], "accuracy", "Accuracy"),
-        (axes[1], "f1", "F1 score"),
-    ]:
+    for ax, metric, title in [(axes[0], "accuracy", "Accuracy"), (axes[1], "f1", "F1 score")]:
         labels, vals, errs, colors = [], [], [], []
         for tag, label, color in MODELS:
             s = load_summary(tag)
             if s is None:
                 continue
             m, e = metric_with_std(s, metric)
-            labels.append(label)
-            vals.append(m)
-            errs.append(e)
-            colors.append(color)
+            labels.append(label); vals.append(m); errs.append(e); colors.append(color)
         x = np.arange(len(labels))
-        bars = ax.bar(x, vals, width, yerr=errs, capsize=4, color=colors, edgecolor="black", linewidth=0.5)
+        bars = ax.bar(x, vals, 0.7, yerr=errs, capsize=4, color=colors, edgecolor="black", linewidth=0.5)
         ax.set_xticks(x)
         ax.set_xticklabels(labels, fontsize=9)
         ax.set_ylabel(title)
@@ -93,10 +74,8 @@ def bar_chart() -> None:
         ax.set_title(title)
         ax.grid(axis="y", alpha=0.3)
         for bar, v in zip(bars, vals):
-            ax.text(bar.get_x() + bar.get_width() / 2, v + 0.015,
-                    f"{v:.2f}", ha="center", fontsize=8)
-    fig.suptitle("Foundation models vs from-scratch CNN on hPSC colony QC\n"
-                 "5-fold stratified CV, n=269 (137 good / 132 bad)", fontsize=11)
+            ax.text(bar.get_x() + bar.get_width() / 2, v + 0.015, f"{v:.2f}", ha="center", fontsize=8)
+    fig.suptitle("Foundation models vs from-scratch CNN on hPSC colony QC\n5-fold stratified CV, n=269 (137 good / 132 bad)", fontsize=11)
     fig.tight_layout()
     out = FIGS / "comparison_bars.png"
     fig.savefig(out, dpi=200, bbox_inches="tight")
@@ -106,7 +85,6 @@ def bar_chart() -> None:
 
 def confusion_matrices() -> None:
     df = pd.read_csv(TABLES / "predictions.csv")
-    n = len(MODELS)
     fig, axes = plt.subplots(2, 3, figsize=(11, 7))
     axes = axes.flatten()
     for i, (tag, label, _) in enumerate(MODELS):
@@ -124,19 +102,13 @@ def confusion_matrices() -> None:
                 ax.text(c, r, f"{cm[r, c]}", ha="center", va="center",
                         color="white" if cm[r, c] > cm.max() / 2 else "black",
                         fontsize=14, fontweight="bold")
-        ax.set_xticks([0, 1])
-        ax.set_yticks([0, 1])
-        ax.set_xticklabels(["bad", "good"])
-        ax.set_yticklabels(["bad", "good"])
-        ax.set_xlabel("predicted")
-        ax.set_ylabel("true")
-        title_acc = f"acc={m.accuracy:.2f}"
-        ax.set_title(f"{label.replace(chr(10), ' ')}\n{title_acc}", fontsize=10)
-    # hide unused subplots
+        ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
+        ax.set_xticklabels(["bad", "good"]); ax.set_yticklabels(["bad", "good"])
+        ax.set_xlabel("predicted"); ax.set_ylabel("true")
+        ax.set_title(f"{label.replace(chr(10), ' ')}\nacc={m.accuracy:.2f}", fontsize=10)
     for j in range(len(MODELS), len(axes)):
         axes[j].axis("off")
-    fig.suptitle("Confusion matrices (predictions aggregated across all 5 folds)",
-                 fontsize=11)
+    fig.suptitle("Confusion matrices (predictions aggregated across all 5 folds)", fontsize=11)
     fig.tight_layout()
     out = FIGS / "confusion_matrices.png"
     fig.savefig(out, dpi=200, bbox_inches="tight")

@@ -1,10 +1,3 @@
-"""Metrics for binary classification, computed from per-image predictions.
-
-We always save per-image (path, true label, predicted prob) so we can:
-- recompute any metric without re-running models
-- run paired statistical tests across models
-- pull out the misclassified images for error analysis
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -30,7 +23,7 @@ class BinaryMetrics:
     recall: float
     f1: float
     auc: float
-    confusion: np.ndarray  # 2x2: rows=true (bad, good), cols=pred (bad, good)
+    confusion: np.ndarray
 
     def as_dict(self) -> dict[str, float]:
         return {
@@ -57,13 +50,12 @@ def compute_metrics(y_true: Sequence[int], y_prob: Sequence[float]) -> BinaryMet
 
 
 def aggregate_folds(per_fold: list[BinaryMetrics]) -> dict[str, tuple[float, float]]:
-    """Returns dict of metric -> (mean, std) across folds."""
     keys = ["accuracy", "precision", "recall", "f1", "auc"]
-    out = {}
-    for k in keys:
-        vals = np.array([getattr(m, k) for m in per_fold])
-        out[k] = (float(vals.mean()), float(vals.std()))
-    return out
+    return {
+        k: (float(np.array([getattr(m, k) for m in per_fold]).mean()),
+            float(np.array([getattr(m, k) for m in per_fold]).std()))
+        for k in keys
+    }
 
 
 def format_results_row(model_name: str, agg: dict[str, tuple[float, float]]) -> dict:
@@ -84,7 +76,6 @@ def save_predictions(
     seed: int,
     model: str,
 ) -> None:
-    """Append per-image predictions to a CSV so we can do paired tests later."""
     df = pd.DataFrame({
         "model": model,
         "fold": fold,
@@ -95,5 +86,4 @@ def save_predictions(
         "y_pred": [int(p >= 0.5) for p in y_prob],
     })
     csv_path.parent.mkdir(parents=True, exist_ok=True)
-    header = not csv_path.exists()
-    df.to_csv(csv_path, mode="a", index=False, header=header)
+    df.to_csv(csv_path, mode="a", index=False, header=not csv_path.exists())

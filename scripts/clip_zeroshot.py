@@ -1,16 +1,3 @@
-"""Zero-shot CLIP classification — no training at all.
-
-Encode each image with CLIP. Encode candidate text prompts for both classes.
-Predict the class whose prompt-embedding is closest (highest cosine similarity)
-to the image embedding.
-
-We test multiple prompt variants because zero-shot performance is sensitive
-to wording. Reports per-prompt metrics and saves the best one's per-image
-predictions for paired stat tests.
-
-Usage:
-    python scripts/clip_zeroshot.py
-"""
 from __future__ import annotations
 
 import json
@@ -31,7 +18,6 @@ RESULTS_DIR = PROJECT / "results"
 PRED_CSV = RESULTS_DIR / "tables" / "predictions.csv"
 SUMMARY_JSON = RESULTS_DIR / "tables" / "clip_zeroshot_summary.json"
 
-# Each entry is (label_for_bad, label_for_good). We pair them as a binary classifier.
 PROMPT_VARIANTS = [
     {
         "name": "simple",
@@ -62,14 +48,10 @@ def main() -> None:
     print(f"Device: {device}")
     print(f"Encoding {len(paths)} images with CLIP ViT-B/32...")
 
-    # Returns (paths, X, y, model, tokenizer)
-    _, X_img, y_true, model, tokenizer = embed_clip_image(
-        paths, device=device, batch_size=16
-    )
+    _, X_img, y_true, model, tokenizer = embed_clip_image(paths, device=device, batch_size=16)
     print(f"Image embeddings: {X_img.shape}")
 
-    X_img_t = torch.from_numpy(X_img).to(device).float()
-    X_img_t = torch.nn.functional.normalize(X_img_t, dim=-1)
+    X_img_t = torch.nn.functional.normalize(torch.from_numpy(X_img).to(device).float(), dim=-1)
     y_true = np.asarray(y_true).astype(int)
 
     results_per_prompt = []
@@ -78,14 +60,10 @@ def main() -> None:
     for v in PROMPT_VARIANTS:
         with torch.no_grad():
             tokens = tokenizer([v["bad"], v["good"]]).to(device)
-            text_emb = model.encode_text(tokens)
-            text_emb = torch.nn.functional.normalize(text_emb, dim=-1)
-            # Cosine similarities, shape (N_images, 2)
-            sims = X_img_t @ text_emb.T  # high if similar
-        sims_np = sims.cpu().float().numpy()
-        # softmax over the two classes to get a probability for "good" (idx 1)
-        # CLIP's standard practice uses temperature 100; we use that for calibration
-        logits = 100.0 * sims_np
+            text_emb = torch.nn.functional.normalize(model.encode_text(tokens), dim=-1)
+            sims = (X_img_t @ text_emb.T).cpu().float().numpy()
+        # CLIP convention: temperature 100 for calibrated probabilities
+        logits = 100.0 * sims
         exp = np.exp(logits - logits.max(axis=1, keepdims=True))
         prob_good = exp[:, 1] / exp.sum(axis=1)
 
@@ -104,11 +82,9 @@ def main() -> None:
 
     print(f"\nBest prompt: '{best['name']}' (acc={best['accuracy']:.3f})")
 
-    # Save best-prompt predictions for paired tests (use fold=-1 to mark "no fold").
-    save_predictions(
-        PRED_CSV, paths, y_true.tolist(), best["prob_good"].tolist(),
-        fold=-1, seed=0, model=f"clip_zeroshot_{best['name']}",
-    )
+    # fold=-1 marks "no fold" — zero-shot uses every image as test
+    save_predictions(PRED_CSV, paths, y_true.tolist(), best["prob_good"].tolist(),
+                     fold=-1, seed=0, model=f"clip_zeroshot_{best['name']}")
 
     SUMMARY_JSON.parent.mkdir(parents=True, exist_ok=True)
     SUMMARY_JSON.write_text(json.dumps({

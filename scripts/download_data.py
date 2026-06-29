@@ -1,8 +1,3 @@
-"""Download and extract the Mamaeva 2022 hPSC colony dataset from Zenodo.
-
-Usage from project root:
-    python scripts/download_data.py
-"""
 import hashlib
 import sys
 import tarfile
@@ -34,8 +29,7 @@ def download(url: str, dst: Path) -> None:
     with requests.get(url, stream=True, headers=headers, timeout=60) as r:
         r.raise_for_status()
         total = int(r.headers.get("Content-Length", 0)) + resume_byte
-        mode = "ab" if resume_byte else "wb"
-        with open(dst, mode) as f, tqdm(
+        with open(dst, "ab" if resume_byte else "wb") as f, tqdm(
             total=total, initial=resume_byte, unit="B", unit_scale=True, desc=dst.name
         ) as pbar:
             for chunk in r.iter_content(chunk_size=1 << 20):
@@ -56,7 +50,6 @@ def main() -> int:
         if actual != EXPECTED_MD5:
             print(f"MD5 mismatch: expected {EXPECTED_MD5}, got {actual}", file=sys.stderr)
             return 1
-        print(f"MD5 verified.")
 
     print(f"Extracting to {RAW}...")
     with tarfile.open(ARCHIVE, "r:gz") as tar:
