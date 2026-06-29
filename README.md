@@ -1,52 +1,15 @@
-# Stem Cell Colony QC: Foundation Models vs From-Scratch CNN
+# Stem cell colony QC: foundation models vs from-scratch CNN
 
-Benchmarking pretrained / self-supervised / zero-shot vision models against a
-from-scratch VGG13 baseline on a small (269-image) phase-contrast microscopy
-dataset of human pluripotent stem cell colonies labeled good / bad.
+Frozen ResNet-50 + DINOv2 + CLIP features beat a from-scratch CNN by 21 points on phase-contrast hPSC colony classification (86% vs 65% accuracy, 0.93 ROC-AUC, 5-fold CV, n=269). ~21 labels per fold to match the baseline.
 
-**Presented at:** ITI HiFunMat Summer School 2026 — *Hierarchical & Functional
-Materials for Health, Environment & Energy*, Université de Strasbourg,
-**29 June – 1 July 2026**.
+Poster: [results/poster.pdf](results/poster.pdf) · Baseline: [Mamaeva 2022](https://doi.org/10.3390/ijms24010140) · Dataset: [Zenodo 7316404](https://doi.org/10.5281/zenodo.7316404)
 
-Final poster: [`results/poster.pdf`](results/poster.pdf)
+## Run
 
-Baseline reference: Mamaeva et al., IJMS 2022 — https://doi.org/10.3390/ijms24010140
-Dataset: https://doi.org/10.5281/zenodo.7316404
-
-## Research question
-
-Can pretrained / self-supervised / zero-shot vision models match or beat a
-from-scratch CNN baseline (89% accuracy) on this small biomedical dataset,
-without the heavy preprocessing + augmentation the original paper needed?
-
-## Models compared
-
-| # | Model | Paradigm | Training on this dataset |
-|---|-------|----------|---------------------------|
-| 1 | VGG13 | From-scratch CNN | Full training |
-| 2 | ResNet-50 | ImageNet pretrained | Fine-tune last layers |
-| 3 | DINOv2 | Self-supervised | Linear probe on frozen features |
-| 4 | CLIP | Vision-language | Zero-shot, text prompts |
-
-Plus: GradCAM / attention visualizations, data efficiency curves
-(accuracy vs training set size), and error analysis grounded in colony biology.
-
-## Layout
-
-```
-src/         # shared modules (data loader, metrics, viz)
-scripts/     # one entry-point per experiment
-data/raw/    # downloaded Zenodo archive (gitignored)
-results/     # figures + tables (gitignored, reproducible)
-notebooks/   # exploratory analysis
-```
-
-## Setup
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Then download the dataset (see `scripts/download_data.py`).
+    python3 -m venv .venv && source .venv/bin/activate
+    pip install -r requirements.txt
+    python scripts/download_data.py
+    python scripts/train_vgg13.py
+    for b in resnet50 dinov2 clip; do python scripts/probe_features.py --backbone $b; done
+    python scripts/ensemble.py
+    python scripts/make_plots.py
